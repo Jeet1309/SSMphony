@@ -264,7 +264,7 @@ $$
 | `s4.py`         | Core S4 layer implementation — includes state matrices, convolution utilities |
 | `tts_model.py`  | Builds TTS model: embedding → S4 blocks → projection                          |
 | `train.py`      | Training loop: loss, optimizer, batching                                      |
-| `test_s4.py`    | Tests for the S4 layers                                                       |
+| `test_s4.py`    | Tests for the S4 model                                                        |
 | `test_model.py` | Unit tests for model sanity                                                   |
 
 ---
