@@ -111,7 +111,7 @@ Given text string:
 We map to a sequence of token IDs:
 
 [
-T = [t_1, t_2, \ldots, t_N]
+T = [t_1, t_2, ... , t_N]
 ]
 
 These feed into an embedding layer:
