@@ -2,11 +2,13 @@
 
 ## 📌 1. Overview
 
-**SSMphony** is a Hindi-language text-to-speech (TTS) model built using a **Structured State Space (S4)** core for sequence modeling. It maps text input to speech waveforms via learned latent representations. It is designed for:
+**SSMphony** is a Hindi-language text-to-speech (TTS) model built using a Structured State Space (S4) core for sequence modeling. It maps text input to speech waveforms via learned latent representations.
 
-* High-quality TTS in Hindi
-* Efficient long-range dependency modeling using S4 layers
-* Scalable training and inference
+Key features:
+
+- High-quality TTS in Hindi
+- Efficient long-range dependency modeling using S4 layers
+- Scalable training and inference
 
 The architecture consists of:
 
@@ -20,71 +22,73 @@ The core innovation is the **S4 (Structured State Space)** layer which replaces 
 
 ## 📌 2. What Is Structured State Space (S4)?
 
-S4 is a **state-space model** adapted for deep learning that can process very long sequences with linear-time complexity while retaining long-range signal information. It’s inspired by continuous-time dynamical systems.
+S4 is a state-space model adapted for deep learning that can process very long sequences with linear-time complexity while retaining long-range signal information. It is inspired by continuous-time state-space models used in control theory.
 
-### 🔹 Continuous Time State Space (CTSSM)
+### 🔹 Continuous-Time State Space (CTSSM)
 
 At the continuous level:
 
-[
+$$
 \dot{x}(t) = A x(t) + B u(t)
-]
-[
+$$
+
+$$
 y(t) = C x(t) + D u(t)
-]
+$$
 
 Where:
 
-* (u(t)) is input signal
-* (x(t)) is latent state
-* (y(t)) is output
-* A, B, C, D are learned matrices
+- $u(t)$ is the input signal
+- $x(t)$ is the latent state
+- $y(t)$ is the output
+- $A, B, C, D$ are learned matrices
 
-This describes **how hidden state evolves given input over time**.
+This describes how the hidden state evolves given the input over time.
 
 ### 🔹 Discrete Sequence Form
 
-Discretizing with step (k):
+Discretizing with step $k$:
 
-[
+$$
 x_k = \bar{A} x_{k-1} + \bar{B} u_k
-]
-[
-y_k = \bar{C} x_k + \bar{D} u_k
-]
+$$
+
+$$
+ y_k = \bar{C} x_k + \bar{D} u_k
+$$
 
 Here:
 
-* (\bar{A}, \bar{B}, \bar{C}, \bar{D}) are discrete state matrices
-* Each new output depends on the current input and state
+- $(\bar{A}, \bar{B}, \bar{C}, \bar{D})$ are discrete state matrices
+- Each new output depends on the current input and state
 
 ### 🔹 Efficient Computation with HiPPO & Diagonalization
 
-S4 uses HiPPO matrices + diagonalization to *stabilize learning and cover long contexts*. Standard RNNs have vanishing/exploding gradients — S4’s math avoids that by modeling via **orthogonal/structured matrices**.
+S4 uses HiPPO matrices and diagonalization to stabilize learning and cover long contexts. Standard RNNs can suffer from vanishing/exploding gradients — S4 mitigates this by using structured state-space parameterizations.
 
 A key computational trick is:
 
-[
+$$
 \bar{A} = V \Lambda V^{-1}
-]
+$$
 
-Where (\Lambda) is diagonal — this **reduces complexity** and enables fast sequence convolution via FFT.
+Where $\Lambda$ is diagonal — this reduces complexity and enables fast sequence convolution via FFT.
 
 ### 🔹 Convolutional View
 
-S4 can be shown to implement:
+S4 can be shown to implement a long convolution:
 
-[
+$$
 y = k * u
-]
+$$
 
-Where convolution kernel (k) arises from state propagation. This means S4 acts like a **learned convolution filter** with super-long receptive field.
+Where the convolution kernel $k$ arises from state propagation. This means S4 acts like a learned convolution filter with a super-long receptive field.
 
 ---
 
 ## 📌 3. SSMphony Architecture
 
-Below is a typical sequence pipeline your repo likely includes based on common TTS structure and S4 modules:
+Below is a typical sequence pipeline included in this repo based on common TTS structure and S4 modules:
 
 ```
 input_text
@@ -102,7 +106,7 @@ waveform
 
 ### 🎙️ 3.1 Text → Tokens
 
-Given text string:
+Given a text string such as:
 
 ```
 "नमस्ते दुनिया"
@@ -110,52 +114,52 @@ Given text string:
 
 We map to a sequence of token IDs:
 
-[
-T = [t_1, t_2, ... , t_N]
-]
+$$
+T = [t_1, t_2, \ldots, t_N]
+$$
 
 These feed into an embedding layer:
 
-[
+$$
 E = W_e T
-]
+$$
 
-Where (W_e ∈ ℝ^{d×V}) and (V) is token vocabulary.
+Where $W_e \in \mathbb{R}^{d\times V}$ and $V$ is the token vocabulary size.
 
 ### 🎙️ 3.2 S4 Encoder/Decoder
 
 Tokens → hidden:
 
-[
+$$
 H^{(0)} = E
-]
+$$
 
-Then for every layer (l):
+Then for every layer $\ell$:
 
-[
-H^{(l)} = \text{S4Layer}(H^{(l-1)})
-]
+$$
+H^{(\ell)} = \mathrm{S4Layer}(H^{(\ell-1)})
+$$
 
-Each S4Layer implements:
+Each S4Layer implements a convolutional-like update:
 
-[
-H^{(l)} = \text{Convolution}(H^{(l-1)}, k)
-]
+$$
+H^{(\ell)} = \mathrm{Convolution}(H^{(\ell-1)}, k)
+$$
 
-Where kernel (k) is derived from state-space propagation matrices with exponential stability.
+Where kernel $k$ is derived from state-space propagation matrices with exponential stability.
 
 ### 🎙️ 3.3 Linear Projection → Mel Spectrogram
 
 For time indices:
 
-[
+$$
 M = W_o H^{(L)} + b
-]
+$$
 
 Where:
 
-* (M ∈ ℝ^{T×F}) is mel spectrogram
-* (W_o, b) are trained output projection
+- $M \in \mathbb{R}^{T\times F}$ is the mel spectrogram
+- $W_o, b$ are trained output projection parameters
 
 Mel spectrogram represents frequency components over time.
 
@@ -167,13 +171,13 @@ The mel spectrogram is then converted to waveform using a neural vocoder (e.g., 
 
 ## 📌 4. Training Objective
 
-The model minimizes **spectrogram reconstruction loss**:
+The model minimizes spectrogram reconstruction loss.
 
 ### 🟨 MSE Loss
 
-[
-\mathcal{L}*{MSE} = \frac{1}{TF} \sum*{t=1}^T \sum_{f=1}^F (M_{t,f} - \hat{M}_{t,f})^2
-]
+$$
+\mathcal{L}_{\mathrm{MSE}} = \frac{1}{TF} \sum_{t=1}^T \sum_{f=1}^F (M_{t,f} - \hat{M}_{t,f})^2
+$$
 
 
 ## 📌 5. Model Architecture (Diagram View)
@@ -194,11 +198,11 @@ The model minimizes **spectrogram reconstruction loss**:
 │    Embedding Layer   │
 │  Tokens → Vectors    │
 │  (N × d_model)       │
-└──────────┬───────────┘
+└──────��───┬───────────┘
            ↓
 ╔══════════════════════╗
 ║      S4 ENCODER      ║
-║ ─────────────────── ║
+║ ───────────────────  ║
 ║  [ S4 Block × L ]    ║
 ║  • Long-range text   ║
 ║    dependency model  ║
@@ -213,7 +217,7 @@ The model minimizes **spectrogram reconstruction loss**:
            ↓
 ╔══════════════════════╗
 ║      S4 DECODER      ║
-║ ─────────────────── ║
+║ ───────────────────  ║
 ║  [ S4 Block × L ]    ║
 ║  • Duration modeling ║
 ║  • Prosody & rhythm  ║
@@ -245,21 +249,12 @@ The model minimizes **spectrogram reconstruction loss**:
 
 ### 🔹 Architectural Highlights
 
-* **Encoder**
-  Learns long-range linguistic structure from text using stacked S4 blocks.
-
-* **Decoder**
-  Expands text representations into time-aligned acoustic features (duration, prosody).
-
-* **S4 Blocks**
-  Replace attention and recurrence with structured state-space sequence modeling.
-
-* **Parallel & Efficient**
-  No autoregressive bottlenecks; scalable to long utterances.
+- Encoder: Learns long-range linguistic structure from text using stacked S4 blocks.
+- Decoder: Expands text representations into time-aligned acoustic features (duration, prosody).
+- S4 Blocks: Replace attention and recurrence with structured state-space sequence modeling.
+- Parallel & Efficient: No autoregressive bottlenecks; scalable to long utterances.
 
 ---
-
-
 
 ## 📌 6. File Annotations
 
@@ -269,7 +264,7 @@ The model minimizes **spectrogram reconstruction loss**:
 | `s4.py`         | Core S4 layer implementation — includes state matrices, convolution utilities |
 | `tts_model.py`  | Builds TTS model: embedding → S4 blocks → projection                          |
 | `train.py`      | Training loop: loss, optimizer, batching                                      |
-| `test_s4.py`    | to test the S4 layers                                                         |
+| `test_s4.py`    | Tests for the S4 layers                                                       |
 | `test_model.py` | Unit tests for model sanity                                                   |
 
 ---
@@ -284,8 +279,3 @@ The model minimizes **spectrogram reconstruction loss**:
 | `batch_size` | Samples per mini-batch       |
 | `warmup`     | Warmup steps for optimizer   |
 | `max_seq`    | Max text length              |
-
-
-
-
-
